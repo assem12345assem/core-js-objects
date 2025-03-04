@@ -34,15 +34,12 @@ function shallowCopy(obj) {
  */
 function mergeObjects(objects) {
   const result = {};
-  objects.forEach(obj => {
-    for (const [key, value] of Object.entries(obj)) {
-      if(result[key]) {
-        result[key] += value;
-        continue;
-      }
-      result[key] = value;
-    }
-  });
+  for (let i = 0; i < objects.length; i += 1) {
+    Object.entries(objects[i]).forEach(([key, value]) => {
+      const newValue = result[key] || 0;
+      result[key] = newValue + value;
+    });
+  }
   return result;
 }
 
@@ -60,14 +57,10 @@ function mergeObjects(objects) {
  *
  */
 function removeProperties(obj, keys) {
-  for(const key of keys) {
-    if(obj.hasOwnProperty(key)) {
-      delete obj[key];
-    }
-  }
-  return obj;
+  const ans = { ...obj };
+  keys.forEach((key) => delete ans[key]);
+  return ans;
 }
-
 /**
  * Compares two source objects. Returns true if the objects are equal and false otherwise.
  * There are no nested objects.
@@ -130,15 +123,16 @@ function makeImmutable(obj) {
  *    makeWord({ H:[0], e: [1], l: [2, 3, 8], o: [4, 6], W:[5], r:[7], d:[9]}) => 'HelloWorld'
  */
 function makeWord(lettersObject) {
-  const result = [];
-  for (const [key, val] of Object.entries(lettersObject)) {
-    val.forEach((i) => {
-      result[i] = key;
-    })
-  }
-  return result.join('');
-}
+  const arr = [];
 
+  Object.entries(lettersObject).forEach(([key, value]) => {
+    value.forEach((index) => {
+      arr[index] = key;
+    });
+  });
+
+  return arr.join('');
+}
 /**
  * There is a queue for tickets to a popular movie.
  * The ticket seller sells one ticket at a time strictly in order and give the change.
@@ -156,32 +150,26 @@ function makeWord(lettersObject) {
 function sellTickets(queue) {
   let twentyFives = 0;
   let fifties = 0;
-  for (const bill of queue) {
-    if(bill === 25) {
-      twentyFives += 1;
-      continue;
+  for (let i = 0; i < queue.length; i += 1) {
+    switch (queue[i]) {
+      case 25:
+        twentyFives += 1;
+        break;
+      case 50:
+        if (twentyFives > 0) {
+          twentyFives -= 1;
+          fifties += 1;
+          break;
+        } else return false;
+      default:
+        if (twentyFives > 0 && fifties > 0) {
+          twentyFives -= 1;
+          fifties -= 1;
+        } else if (twentyFives > 2) {
+          twentyFives -= 3;
+        } else return false;
     }
-    if (bill === 50) {
-      if(twentyFives > 0) {
-        twentyFives -= 1;
-        fifties += 1;
-        continue;
-      }
-      return false;
-    }
-
-    if(fifties > 0 && twentyFives > 0) {
-        fifties -= 1;
-        twentyFives -= 1;
-        continue;
-      }
-      if(twentyFives > 2) {
-        twentyFives -= 3;
-        continue;
-      }
-      return false;
-    }
-
+  }
   return true;
 }
 
@@ -199,18 +187,18 @@ function sellTickets(queue) {
  *    console.log(r.getArea());   // => 200
  */
 function Rectangle(width, height) {
-    this.width = width;
-    this.height = height;
+  this.width = width;
+  this.height = height;
 
-  this.getWidth = function() {
+  this.getWidth = () => {
     return this.width;
-  }
-  this.getHeight = function() {
+  };
+  this.getHeight = () => {
     return this.height;
-  }
-  this.getArea = function() {
+  };
+  this.getArea = () => {
     return this.height * this.width;
-  }
+  };
 }
 
 /**
@@ -273,20 +261,20 @@ function fromJSON(proto, json) {
  */
 function sortCitiesArray(arr) {
   return arr.sort((a, b) => {
-    if(a.country < b.country) {
+    if (a.country < b.country) {
       return -1;
-    } else if(a.country > b.country) {
-      return 1;
-    } else {
-      if(a.city < b.city) {
-        return -1;
-      } else if(a.city > b.city) {
-        return 1;
-      } else {
-        return 0;
-      }
     }
-  })
+    if (a.country > b.country) {
+      return 1;
+    }
+    if (a.city < b.city) {
+      return -1;
+    }
+    if (a.city > b.city) {
+      return 1;
+    }
+    return 0;
+  });
 }
 
 /**
@@ -321,15 +309,15 @@ function sortCitiesArray(arr) {
  */
 function group(array, keySelector, valueSelector) {
   const map = new Map();
-  array.forEach(obj => {
+  array.forEach((obj) => {
     const key = keySelector(obj);
     const value = valueSelector(obj);
-    if(!map.has(key)) {
+    if (!map.has(key)) {
       map.set(key, []);
     }
     map.get(key).push(value);
-  })
-return map;
+  });
+  return map;
 }
 
 /**
@@ -387,32 +375,62 @@ return map;
  */
 
 const cssSelectorBuilder = {
+  selector: '',
+  index: 0,
   element(value) {
-    throw new Error('Not implemented');
+    return this.create(value, 0, 'isElemAdded');
   },
 
   id(value) {
-    throw new Error('Not implemented');
+    return this.create(`#${value}`, 1, 'isIdAdded');
   },
 
   class(value) {
-    throw new Error('Not implemented');
+    return this.create(`.${value}`, 2);
   },
 
   attr(value) {
-    throw new Error('Not implemented');
+    return this.create(`[${value}]`, 3);
   },
 
   pseudoClass(value) {
-    throw new Error('Not implemented');
+    return this.create(`:${value}`, 4);
   },
 
   pseudoElement(value) {
-    throw new Error('Not implemented');
+    return this.create(`::${value}`, 5, 'isPseudoElemAdded');
   },
 
   combine(selector1, combinator, selector2) {
-    throw new Error('Not implemented');
+    const newObject = { ...this };
+    newObject.selector = `${selector1.selector} ${combinator} ${selector2.selector}`;
+    return newObject;
+  },
+  stringify() {
+    return this.selector;
+  },
+  create(value, index, element) {
+    if (this.index > index) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    if (
+      (element === 'isElemAdded' && this.isElemAdded) ||
+      (element === 'isIdAdded' && this.isIdAdded) ||
+      (element === 'isPseudoElemAdded' && this.isPseudoElemAdded)
+    ) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    const cssBuilder = { ...this };
+    cssBuilder.selector += value;
+    cssBuilder.index = index;
+    if (element) {
+      cssBuilder[element] = true;
+    }
+    return cssBuilder;
   },
 };
 
